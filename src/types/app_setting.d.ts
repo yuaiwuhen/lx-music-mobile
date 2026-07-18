@@ -352,10 +352,29 @@ declare global {
       'download.fileName': '歌名 - 歌手' | '歌手 - 歌名' | '歌名'
 
       /**
+       * 下载保存路径（Android Scoped URI 或绝对路径，空表示使用应用默认私有目录）
+       */
+      'download.savePath': string
+
+      /**
+       * 默认下载音质
+       */
+      'download.quality': LX.Quality
+
+      /**
+       * 同时下载任务数
+       */
+      'download.maxDownloadNum': number
+
+      /**
+       * 是否将所有音源下载到统一目录（true=合并；false=按音源分子目录）
+       */
+      'download.useMrgedFolder': boolean
+
+      /**
        * 是否启用同步
        */
       'sync.enable': boolean
     }
   }
 }
-

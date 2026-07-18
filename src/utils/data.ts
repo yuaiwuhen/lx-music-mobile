@@ -26,6 +26,7 @@ const syncHostPrefix = storageDataPrefix.syncHost
 const syncHostHistoryPrefix = storageDataPrefix.syncHostHistory
 const listPrefix = storageDataPrefix.list
 const dislikeListPrefix = storageDataPrefix.dislikeList
+const downloadListKey = storageDataPrefix.downloadList
 const userApiPrefix = storageDataPrefix.userApi
 const openStoragePathPrefix = storageDataPrefix.openStoragePath
 const selectedManagedFolderPrefix = storageDataPrefix.selectedManagedFolder
@@ -399,6 +400,27 @@ export const getDislikeListRules = async() => {
  */
 export const saveDislikeListRules = async(rules: string) => {
   await saveData(dislikeListPrefix, rules)
+}
+
+const saveDownloadListThrottle = throttle(() => {
+  void saveData(downloadListKey, cachedDownloadList)
+}, 1000)
+
+let cachedDownloadList: LX.Download.ListItem[] = []
+/**
+ * 获取持久化的下载列表
+ */
+export const getDownloadList = async() => {
+  const list = await getData<LX.Download.ListItem[]>(downloadListKey)
+  cachedDownloadList = list ?? []
+  return cachedDownloadList
+}
+/**
+ * 保存下载列表（节流 1s）
+ */
+export const saveDownloadList = (list: LX.Download.ListItem[]) => {
+  cachedDownloadList = list
+  saveDownloadListThrottle()
 }
 
 // export const clearMusicUrlAndLyric = async() => {

@@ -1,0 +1,5 @@
+allowBuilds:
+  react-native-background-timer: true
+  react-native-file-system: true
+  react-native-local-media-metadata: true
+  react-native-track-player: true

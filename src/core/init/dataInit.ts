@@ -3,11 +3,13 @@
 import { init as musicSdkInit } from '@/utils/musicSdk'
 import { getUserLists, setUserList } from '@/core/list'
 import { setNavActiveId } from '../common'
-import { getViewPrevState } from '@/utils/data'
+import { getViewPrevState, getDownloadList } from '@/utils/data'
 import { bootLog } from '@/utils/bootLog'
 import { getDislikeInfo, setDislikeInfo } from '@/core/dislikeList'
 import { unlink } from '@/utils/fs'
 import { TEMP_FILE_PATH } from '@/utils/tools'
+import { hydrate as hydrateDownloadList } from '@/store/downloadList/action'
+import { triggerSchedule } from '@/core/downloadList/task'
 // import { play, playList } from '../player/player'
 
 // const initPrevPlayInfo = async(appSetting: LX.AppSetting) => {
@@ -23,6 +25,7 @@ import { TEMP_FILE_PATH } from '@/utils/tools'
 // }
 
 export default async(appSetting: LX.AppSetting) => {
+  console.log('[dataInit] starting...')
   // await Promise.all([
   //   initUserApi(), // 自定义API
   // ]).catch(err => log.error(err))
@@ -33,5 +36,35 @@ export default async(appSetting: LX.AppSetting) => {
   bootLog('User list inited.')
   setNavActiveId((await getViewPrevState()).id)
   void unlink(TEMP_FILE_PATH)
+
+  // 恢复持久化的下载列表：运行中的任务转为 waiting，由调度器重新拉起
+  bootLog('Download list init...')
+  console.log('[dataInit] restoring download list...')
+  try {
+    const persisted = await getDownloadList()
+    console.log('[dataInit] persisted download list length:', persisted.length, 'full data:', JSON.stringify(persisted))
+    if (persisted.length) {
+      const restored = persisted.map(item => {
+        if (item.status === 'run') {
+          return {
+            ...item,
+            status: 'waiting' as const,
+            statusText: global.i18n?.t?.('download_status_waiting') ?? '等待中',
+            speed: '',
+            // 保留 downloaded/total/progress 仅作展示，实际重新下载会从 0 开始
+          }
+        }
+        return item
+      })
+      hydrateDownloadList(restored)
+      // 触发一次调度，让等待中的任务自动开始
+      void triggerSchedule()
+    }
+  } catch (err) {
+    // 恢复失败不应阻塞启动
+    console.warn('restore download list failed:', err)
+  }
+  bootLog('Download list inited.')
+
   // await initPrevPlayInfo(appSetting).catch(err => log.error(err)) // 初始化上次的歌曲播放信息
 }

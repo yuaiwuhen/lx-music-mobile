@@ -25,4 +25,27 @@ buildscript {
     }
 }
 
+// 强制所有子模块使用相同的 JVM target（17），避免 JDK 21 编译 Java / Kotlin 17 编译不一致
+subprojects { subproject ->
+    subproject.tasks.withType(JavaCompile).configureEach {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    subproject.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+    subproject.afterEvaluate {
+        if (subproject.hasProperty("android")) {
+            subproject.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

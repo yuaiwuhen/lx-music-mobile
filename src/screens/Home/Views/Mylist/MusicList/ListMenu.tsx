@@ -16,6 +16,7 @@ const initSelectInfo = {}
 export interface ListMenuProps {
   onPlay: (selectInfo: SelectInfo) => void
   onPlayLater: (selectInfo: SelectInfo) => void
+  onDownload: (selectInfo: SelectInfo) => void
   onAdd: (selectInfo: SelectInfo) => void
   onMove: (selectInfo: SelectInfo) => void
   onEditMetadata: (selectInfo: SelectInfo) => void
@@ -61,10 +62,12 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
 
   const handleSetMenu = (musicInfo: LX.Music.MusicInfo) => {
     let edit_metadata = false
+    const isLocal = musicInfo.source == 'local'
     const menu = [
       { action: 'play', label: t('play') },
       { action: 'playLater', label: t('play_later') },
-      // { action: 'download', label: '下载' },
+      // 仅在线歌曲可下载（本地歌曲文件已在本地，无需下载）
+      ...(isLocal ? [] : [{ action: 'download' as const, label: t('download_action') }]),
       { action: 'add', label: t('add_to') },
       { action: 'move', label: t('move_to') },
       { action: 'changePosition', label: t('change_position') },
@@ -101,6 +104,9 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       case 'playLater':
         props.onPlayLater(selectInfo)
 
+        break
+      case 'download':
+        props.onDownload(selectInfo)
         break
       case 'add':
         props.onAdd(selectInfo)

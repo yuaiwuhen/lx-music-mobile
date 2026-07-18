@@ -4,14 +4,18 @@ import SongList from '../Views/SongList'
 import Mylist from '../Views/Mylist'
 import Leaderboard from '../Views/Leaderboard'
 import Setting from '../Views/Setting'
+import Download from '../Views/Download'
 import commonState, { type InitState as CommonState } from '@/store/common/state'
 
 
 const Main = () => {
   const [id, setId] = useState(commonState.navActiveId)
+  console.log('[Horizontal Main] render, id:', id, 'commonState.navActiveId:', commonState.navActiveId)
 
   useEffect(() => {
+    console.log('[Horizontal Main] mounted, initial id:', commonState.navActiveId)
     const handleUpdate = (id: CommonState['navActiveId']) => {
+      console.log('[Horizontal Main] navActiveIdUpdated:', id)
       requestAnimationFrame(() => {
         setId(id)
       })
@@ -23,10 +27,12 @@ const Main = () => {
   }, [])
 
   const component = useMemo(() => {
+    console.log('[Horizontal Main] useMemo, id:', id)
     switch (id) {
       case 'nav_songlist': return <SongList />
       case 'nav_top': return <Leaderboard />
       case 'nav_love': return <Mylist />
+      case 'nav_download': return <Download />
       case 'nav_setting': return <Setting />
       case 'nav_search':
       default: return <Search />
@@ -38,4 +44,3 @@ const Main = () => {
 
 
 export default Main
-

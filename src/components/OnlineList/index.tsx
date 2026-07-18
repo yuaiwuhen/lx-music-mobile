@@ -6,7 +6,9 @@ import ListMenu, { type ListMenuType, type Position, type SelectInfo } from './L
 import ListMusicMultiAdd, { type MusicMultiAddModalType as ListAddMultiType } from '@/components/MusicMultiAddModal'
 import ListMusicAdd, { type MusicAddModalType as ListMusicAddType } from '@/components/MusicAddModal'
 import MultipleModeBar, { type MultipleModeBarType, type SelectMode } from './MultipleModeBar'
+import QualitySelector, { type QualitySelectorType } from '@/components/QualitySelector'
 import { handleDislikeMusic, handlePlay, handlePlayLater, handleShare, handleShowMusicSourceDetail } from './listAction'
+import { addDownload, addBatchDownload } from '@/core/downloadList'
 import { createStyle } from '@/utils/tools'
 
 export interface OnlineListProps {
@@ -37,6 +39,7 @@ export default forwardRef<OnlineListType, OnlineListProps>(({
   const listMusicAddRef = useRef<ListMusicAddType>(null)
   const listMusicMultiAddRef = useRef<ListAddMultiType>(null)
   const listMenuRef = useRef<ListMenuType>(null)
+  const qualitySelectorRef = useRef<QualitySelectorType>(null)
   // const loadingMaskRef = useRef<LoadingMaskType>(null)
 
   useImperativeHandle(ref, () => ({
@@ -77,6 +80,17 @@ export default forwardRef<OnlineListType, OnlineListProps>(({
       listMusicAddRef.current?.show({ musicInfo: info.musicInfo, listId: '', isMove: false })
     }
   }
+  const handleDownload = (info: SelectInfo) => {
+    const list = info.selectedList.length ? info.selectedList : [info.musicInfo]
+    qualitySelectorRef.current?.show(list, (quality) => {
+      if (list.length === 1) {
+        addDownload(list[0], quality)
+      } else {
+        addBatchDownload(list, quality)
+      }
+      hancelExitSelect()
+    })
+  }
 
   return (
     <View style={styles.container}>
@@ -99,6 +113,23 @@ export default forwardRef<OnlineListType, OnlineListProps>(({
           onSwitchMode={hancelSwitchSelectMode}
           onSelectAll={isAll => listRef.current?.selectAll(isAll)}
           onExitSelectMode={hancelExitSelect}
+          onDownload={() => {
+            const selectedList = listRef.current?.getSelectedList() ?? []
+            console.log('[OnlineList] MultipleModeBar onDownload', { selectedLen: selectedList.length })
+            if (!selectedList.length) {
+              toast(global.i18n.t('download_select_empty_tip'))
+              return
+            }
+            qualitySelectorRef.current?.show(selectedList, (quality) => {
+              console.log('[OnlineList] MultipleModeBar quality selected', quality)
+              if (selectedList.length === 1) {
+                addDownload(selectedList[0], quality)
+              } else {
+                addBatchDownload(selectedList, quality)
+              }
+              hancelExitSelect()
+            })
+          }}
         />
       </View>
       <ListMusicAdd ref={listMusicAddRef} onAdded={() => { hancelExitSelect() }} />
@@ -109,9 +140,11 @@ export default forwardRef<OnlineListType, OnlineListProps>(({
         onPlayLater={info => { hancelExitSelect(); handlePlayLater(info.musicInfo, info.selectedList, hancelExitSelect) }}
         onCopyName={info => { handleShare(info.musicInfo) }}
         onAdd={handleAddMusic}
+        onDownload={handleDownload}
         onMusicSourceDetail={info => { void handleShowMusicSourceDetail(info.musicInfo) }}
         onDislikeMusic={info => { void handleDislikeMusic(info.musicInfo) }}
       />
+      <QualitySelector ref={qualitySelectorRef} />
       {/* <LoadingMask ref={loadingMaskRef} /> */}
     </View>
   )
@@ -130,4 +163,3 @@ const styles = createStyle({
     height: 40,
   },
 })
-

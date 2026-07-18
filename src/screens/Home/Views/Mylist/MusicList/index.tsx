@@ -6,7 +6,9 @@ import { handleDislikeMusic, handlePlay, handlePlayLater, handleRemove, handleSh
 import List, { type ListType } from './List'
 import ListMusicAdd, { type MusicAddModalType as ListMusicAddType } from '@/components/MusicAddModal'
 import ListMusicMultiAdd, { type MusicMultiAddModalType as ListAddMultiType } from '@/components/MusicMultiAddModal'
-import { createStyle } from '@/utils/tools'
+import QualitySelector, { type QualitySelectorType } from '@/components/QualitySelector'
+import { addDownload, addBatchDownload } from '@/core/downloadList'
+import { createStyle, toast } from '@/utils/tools'
 import { type LayoutChangeEvent, View } from 'react-native'
 import ActiveList, { type ActiveListType } from './ActiveList'
 import MultipleModeBar, { type SelectMode, type MultipleModeBarType } from './MultipleModeBar'
@@ -30,6 +32,7 @@ export default () => {
   const metadataEditTypeRef = useRef<MetadataEditType>(null)
   const listMenuRef = useRef<ListMenuType>(null)
   const musicToggleModalRef = useRef<MusicToggleModalType>(null)
+  const qualitySelectorRef = useRef<QualitySelectorType>(null)
   const layoutHeightRef = useRef<number>(0)
   const isShowMultipleModeBar = useRef(false)
   const isShowSearchBarModeBar = useRef(false)
@@ -117,6 +120,26 @@ export default () => {
     if (!selectedInfoRef.current || selectedInfoRef.current.musicInfo.source != 'local') return
     handleUpdateMusicInfo(selectedInfoRef.current.listId, selectedInfoRef.current.musicInfo, info)
   }, [])
+  // 下载：过滤掉本地歌曲（source == 'local'），只下载在线歌曲
+  const handleDownload = useCallback((info: SelectInfo) => {
+    console.log('[MyList] handleDownload called', { selectedLen: info.selectedList.length, musicName: info.musicInfo.name })
+    const all = info.selectedList.length ? info.selectedList : [info.musicInfo]
+    const onlineList = all.filter(m => m.source != 'local') as LX.Music.MusicInfoOnline[]
+    console.log('[MyList] onlineList length', onlineList.length)
+    if (!onlineList.length) {
+      toast(global.i18n.t('download_no_online_music_tip'))
+      return
+    }
+    qualitySelectorRef.current?.show(onlineList, (quality) => {
+      console.log('[MyList] quality selected', quality)
+      if (onlineList.length === 1) {
+        addDownload(onlineList[0], quality)
+      } else {
+        addBatchDownload(onlineList, quality)
+      }
+      hancelExitSelect()
+    })
+  }, [hancelExitSelect])
 
 
   return (
@@ -128,6 +151,28 @@ export default () => {
           onSwitchMode={hancelSwitchSelectMode}
           onSelectAll={isAll => listRef.current?.selectAll(isAll)}
           onExitSelectMode={hancelExitSelect}
+          onDownload={() => {
+            const selectedList = listRef.current?.getSelectedList() ?? []
+            console.log('[MyList] MultipleModeBar onDownload', { selectedLen: selectedList.length })
+            if (!selectedList.length) {
+              toast(global.i18n.t('download_select_empty_tip'))
+              return
+            }
+            const onlineList = selectedList.filter(m => m.source != 'local') as LX.Music.MusicInfoOnline[]
+            if (!onlineList.length) {
+              toast(global.i18n.t('download_no_online_music_tip'))
+              return
+            }
+            qualitySelectorRef.current?.show(onlineList, (quality) => {
+              console.log('[MyList] MultipleModeBar quality selected', quality)
+              if (onlineList.length === 1) {
+                addDownload(onlineList[0], quality)
+              } else {
+                addBatchDownload(onlineList, quality)
+              }
+              hancelExitSelect()
+            })
+          }}
         />
         <ListSearchBar
           ref={listSearchBarRef}
@@ -155,6 +200,7 @@ export default () => {
         ref={listMenuRef}
         onPlay={info => { handlePlay(info.listId, info.index) }}
         onPlayLater={info => { hancelExitSelect(); handlePlayLater(info.listId, info.musicInfo, info.selectedList, hancelExitSelect) }}
+        onDownload={handleDownload}
         onRemove={info => { hancelExitSelect(); handleRemove(info.listId, info.musicInfo, info.selectedList, hancelExitSelect) }}
         onDislikeMusic={info => { void handleDislikeMusic(info.musicInfo) }}
         onCopyName={info => { handleShare(info.musicInfo) }}
@@ -165,6 +211,7 @@ export default () => {
         onChangePosition={info => musicPositionModalRef.current?.show(info)}
         onToggleSource={info => musicToggleModalRef.current?.show(info)}
       />
+      <QualitySelector ref={qualitySelectorRef} />
       <MetadataEditModal
         ref={metadataEditTypeRef}
         onUpdate={handleUpdateMetadata}

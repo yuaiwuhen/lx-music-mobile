@@ -229,7 +229,7 @@ const debouncePlay = debounceBackgroundTimer((musicInfo: LX.Player.PlayMusic) =>
 const handlePlay = async() => {
   if (!isInitialized()) {
     await checkNotificationPermission()
-    void checkIgnoringBatteryOptimization()
+    // void checkIgnoringBatteryOptimization() // disabled for testing
     await playerInitial({
       volume: settingState.setting['player.volume'],
       playRate: settingState.setting['player.playbackRate'],
